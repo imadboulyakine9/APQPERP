@@ -1,10 +1,8 @@
 import uuid
 from django.db import models
-# from django.contrib.auth.models import User # Option 1
-# from django.contrib.auth.models import AbstractUser # Option 2
+from django.contrib.auth.models import AbstractUser
 
-# TODO: Decide on authentication approach - either use Django's built-in User model or create a custom one
-# TODO: Consider implementing AbstractUser for more flexibility with authentication
+# Using Django's built-in authentication system with AbstractUser for custom fields
 
 # --- Constants for Choices ---
 
@@ -46,20 +44,21 @@ LOG_STATUS_CHOICES = [
 
 # --- Models ---
 
-class User(models.Model):
-    user_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=200)
-    email = models.EmailField(unique=True)
+class User(AbstractUser):
+    """
+    Custom User model extending Django's AbstractUser to include additional fields
+    AbstractUser already provides: username, email, password, first_name, last_name, is_staff, is_active, etc.
+    """
+    user_id = models.UUIDField(default=uuid.uuid4, editable=False)
+    # Use username/email from AbstractUser
     department_name = models.CharField(max_length=100, blank=True, null=True)
     role = models.CharField(max_length=100, blank=True, null=True)
     # M2M to Team defined in Team model
     # M2M for Project Permissions defined in Project model
-    
-    # TODO: Add password and authentication fields if not using Django's built-in User
-    # TODO: Consider adding profile picture, contact information, and user preferences
 
     def __str__(self):
-        return self.name
+        # Use full_name if available, otherwise username
+        return self.get_full_name() or self.username
 
 class Team(models.Model):
     team_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -144,7 +143,8 @@ class ProjectPermission(models.Model):
     granted_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.user.name} - {self.project.name} ({self.get_permission_level_display()})"
+        user_display = self.user.get_full_name() or self.user.username
+        return f"{user_display} - {self.project.name} ({self.get_permission_level_display()})"
 
     class Meta:
         unique_together = ('user', 'project') # User has one permission level per project
@@ -229,7 +229,8 @@ class Task(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        assignee = f" to {self.assigned_user.name}" if self.assigned_user else " (Unassigned)"
+        assignee_name = self.assigned_user.get_full_name() or self.assigned_user.username if self.assigned_user else None
+        assignee = f" to {assignee_name}" if assignee_name else " (Unassigned)"
         return f"Task: {self.name} [{self.status}] (Phase {self.phase.level} - {self.phase.project.name}){assignee}"
 
     class Meta:
@@ -286,7 +287,8 @@ class HistoryLog(models.Model):
             target += f", Phase: {self.phase.level}"
         if self.task:
              target += f", Task: {self.task.name[:30]}..." # Truncate task name
-        actor = f"User: {self.user.name}" if self.user else "System"
+        user_display = self.user.get_full_name() or self.user.username if self.user else None
+        actor = f"User: {user_display}" if self.user else "System"
         return f"[{self.timestamp.strftime('%Y-%m-%d %H:%M')}] ({self.status}) {actor} - {self.name} on {target}"
 
     class Meta:
