@@ -3,6 +3,9 @@ from django.db import models
 # from django.contrib.auth.models import User # Option 1
 # from django.contrib.auth.models import AbstractUser # Option 2
 
+# TODO: Decide on authentication approach - either use Django's built-in User model or create a custom one
+# TODO: Consider implementing AbstractUser for more flexibility with authentication
+
 # --- Constants for Choices ---
 
 PROJECT_STATUS_CHOICES = [
@@ -51,6 +54,9 @@ class User(models.Model):
     role = models.CharField(max_length=100, blank=True, null=True)
     # M2M to Team defined in Team model
     # M2M for Project Permissions defined in Project model
+    
+    # TODO: Add password and authentication fields if not using Django's built-in User
+    # TODO: Consider adding profile picture, contact information, and user preferences
 
     def __str__(self):
         return self.name
@@ -72,7 +78,8 @@ class Client(models.Model):
     client_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200)
     email = models.EmailField(unique=True) # Unique email across all clients
-    # Other general client info can be added here if needed
+    # TODO: Add additional client fields like address, phone, industry, and contact person
+    # TODO: Consider implementing a client hierarchy for parent/subsidiary relationships
     # M2M to Project defined in Project model
 
     def __str__(self):
@@ -82,6 +89,8 @@ class Project(models.Model):
     project_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
     desc = models.TextField(blank=True, null=True)
+    # TODO: Add project code/number field for easier reference
+    # TODO: Add start_date and target_end_date fields
     status = models.CharField(
         max_length=50,
         choices=PROJECT_STATUS_CHOICES,
@@ -106,7 +115,7 @@ class Project(models.Model):
         Client,
         related_name='projects',
         blank=True,
-        # Optional: Add a 'through' model if you need to store role/info specific to the Project-Client relationship
+        # TODO: Implement ProjectClientMembership through model to store client roles and specific requirements
         # through='ProjectClientMembership'
     )
     # Users with specific permissions on this project
@@ -146,6 +155,10 @@ class PhaseTemplate(models.Model):
     # Content now likely includes definitions for standard tasks for this template type
     content = models.JSONField(default=dict, help_text="Defines phase structure, fields, and potentially standard task definitions.")
     applicable_level = models.IntegerField(null=True, blank=True)
+    
+    # TODO: Add version control for templates
+    # TODO: Add template category/type field for better organization
+    # TODO: Consider implementing template inheritance/extension mechanism
 
     def __str__(self):
         return self.name
@@ -158,6 +171,9 @@ class Phase(models.Model):
         related_name='phases'
     )
     level = models.IntegerField(help_text="Sequential level (e.g., 1, 2).")
+    # TODO: Add name field for better identification beyond just level number
+    # TODO: Add start_date and completion_date fields for tracking timeline
+    # TODO: Add dependency tracking to enforce phase sequence requirements
     status = models.CharField(
         max_length=50,
         choices=PHASE_STATUS_CHOICES,
@@ -169,12 +185,7 @@ class Phase(models.Model):
         blank=True,
         help_text="JSON describing the specific structure/fields for this phase instance."
     )
-    # Simplified documents list (can be enhanced later)
-    documents = models.JSONField(
-        default=list,
-        blank=True,
-        help_text="List of associated documents (e.g., [{name: 'spec.pdf', id: '...', url: '...'}])."
-    )
+    
     # Note: Phase-specific permissions removed, use ProjectPermission now.
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -194,6 +205,9 @@ class Task(models.Model):
         on_delete=models.CASCADE, # Task belongs to a phase
         related_name='tasks'
     )
+    # TODO: Add priority field (High, Medium, Low)
+    # TODO: Add estimated_hours field for time tracking
+    # TODO: Implement task dependencies (prerequisite tasks)
     assigned_user = models.ForeignKey(
         User,
         on_delete=models.SET_NULL, # Keep task if user deleted, needs reassignment

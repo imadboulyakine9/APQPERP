@@ -1,0 +1,6 @@
+Django>=5.2.0
+djangorestframework>=3.14.0
+Pillow>=10.0.0  # For image processing
+python-dotenv>=1.0.0  # For environment variable management
+django-filter>=24.1  # For filtering in DRF
+djangorestframework-simplejwt>=5.2.0  # For JWT authentication
