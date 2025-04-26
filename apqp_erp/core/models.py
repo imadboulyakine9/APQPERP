@@ -277,3 +277,34 @@ class HistoryLog(models.Model):
 
     class Meta:
         ordering = ['-timestamp']
+
+class Document(models.Model):
+    document_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    phase = models.ForeignKey(
+        Phase,
+        on_delete=models.CASCADE, # Delete document if phase is deleted
+        related_name='phase_documents'
+    )
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL, # Keep document if user is deleted
+        related_name='uploaded_documents',
+        null=True
+    )
+    # TODO : Requires configuring MEDIA_ROOT and MEDIA_URL in settings.py
+    file = models.FileField(upload_to='project_documents/%Y/%m/%d/')
+    name = models.CharField(max_length=255, blank=True, help_text="Original filename or custom name")
+    description = models.TextField(blank=True, null=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        # Automatically set the name from the filename if not provided
+        if not self.name and self.file:
+            self.name = self.file.name
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name} (Phase: {self.phase.level} - {self.phase.project.name})"
+
+    class Meta:
+        ordering = ['-uploaded_at']
